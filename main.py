@@ -10,14 +10,17 @@ dp = Dispatcher()
 
 @dp.message(Command("start"))
 async def start_command(message: types.Message):
-    # ✅ Правильний спосіб створення клавіатури у v3
-    keyboard = types.InlineKeyboardMarkup(
-        inline_keyboard=[
-            [types.InlineKeyboardButton(
-                text="🎄 Відкрити Christmas Mini-App",
-                web_app=types.WebAppInfo(url=WEBAPP_URL)
-            )]
-        ]
+    keyboard = types.ReplyKeyboardMarkup(
+        keyboard=[
+            [
+                types.KeyboardButton(
+                    text="🎄 Відкрити Christmas Mini-App",
+                    web_app=types.WebAppInfo(url=WEBAPP_URL)
+                )
+            ]
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=False
     )
 
     await message.answer(
