@@ -1,6 +1,7 @@
 import asyncio
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
+from pathlib import Path
 
 BOT_TOKEN = "8300246817:AAEWYptTIHhhMjYjvzy9x6B3jzEMX6h5k2U"
 WEBAPP_URL = "https://telegramchristmass.netlify.app/"
@@ -23,10 +24,31 @@ async def start_command(message: types.Message):
         one_time_keyboard=False
     )
 
-    await message.answer(
-        "Вітаю у 🎅 Christmas Mini-App!\nНатисни кнопку нижче, щоб запустити гру:",
-        reply_markup=keyboard
+    caption = (
+        "🎅 **Ласкаво просимо до Christmas Mini-App!**\n\n"
+        "Збирай іграшки, прикрашай ялинку 🎄 та ділися святковим настроєм з друзями!\n\n"
+        "Натисни кнопку нижче, щоб розпочати гру 👇"
     )
+
+    photo_path = Path("assets/Intro.png")
+
+    with photo_path.open("rb") as photo:
+        await message.answer_photo(
+            photo=photo,
+            caption=caption,
+            parse_mode="Markdown",
+            reply_markup=keyboard
+        )
+
+    @dp.message(lambda msg: msg.text == "ℹ️ Допомога")
+    async def help_message(message: types.Message):
+        await message.answer(
+            "ℹ️ **Як грати:**\n\n"
+            "1️⃣ Натисни '🎄 Відкрити Christmas Mini-App'.\n"
+            "2️⃣ Грай прямо в Telegram — прикрась свою ялинку!\n"
+            "3️⃣ Збирай іграшки, ділися результатом з друзями! 🎁",
+            parse_mode="Markdown"
+        )
 
 async def main():
     print("✅ Bot is running... (Press Ctrl+C to stop)")
