@@ -74,7 +74,7 @@ async def post_update(message: types.Message, command: CommandObject):
         ]
     )
 
-    photo_path = "assets/update.png"
+    photo_path = "assets/Update.png"
 
     try:
         photo = FSInputFile(photo_path)
