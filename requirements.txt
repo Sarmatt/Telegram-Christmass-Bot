@@ -1,5 +1,14 @@
-aiogram==3.4.1
+# Telegram bot
+aiogram==3.3.0
+
+# Firebase / Firestore
 google-cloud-firestore==2.13.1
 google-cloud-core==2.3.3
 google-auth==2.27.0
+
+# Networking
 aiohttp==3.9.5
+
+# System deps
+setuptools
+wheel
