@@ -1,30 +1,67 @@
+import os
+import json
+import asyncio
+from pathlib import Path
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command, CommandObject
 from aiogram.types import FSInputFile, InlineKeyboardMarkup, InlineKeyboardButton
-from pathlib import Path
-import asyncio
-import os, json
 from google.cloud import firestore
+
+# =============================
+# 🔑 Налаштування
+# =============================
 
 BOT_TOKEN = "8300246817:AAEWYptTIHhhMjYjvzy9x6B3jzEMX6h5k2U"
 WEBAPP_URL = "https://telegramchristmass.netlify.app/"
 SUGGEST_URL = "https://docs.google.com/forms/d/e/1FAIpQLSf0hhijdz8upqx0umgQ6kNZp5UjpAdjn3n8cedKWKvGKbjlrQ/viewform?usp=sharing&ouid=101691539867638061155"  # 👈 заміни на своє посилання
-FIREBASE_CREDENTIALS = "assets/firebase-key.json"
+ADMIN_ID = 731475622  # 👈 твій Telegram ID
+
+
+# =============================
+# 🧩 Ініціалізація Firestore
+# =============================
+
+def init_firestore():
+    """Автоматичне підключення до Firestore з ENV або локального файлу."""
+    creds_json = os.getenv("FIREBASE_KEY")
+
+    if creds_json:
+        try:
+            creds = json.loads(creds_json)
+            print("✅ Firestore підключено через змінну середовища.")
+            return firestore.Client.from_service_account_info(creds)
+        except Exception as e:
+            print(f"⚠️ Помилка при зчитуванні FIREBASE_KEY: {e}")
+
+    local_key_path = Path("assets/firebase-key.json")
+    if local_key_path.exists():
+        try:
+            print("✅ Firestore підключено через локальний файл firebase-key.json.")
+            return firestore.Client.from_service_account_json(str(local_key_path))
+        except Exception as e:
+            print(f"❌ Не вдалося підключитись через локальний файл: {e}")
+            raise
+    else:
+        raise FileNotFoundError("❌ Не знайдено FIREBASE_KEY або firebase-key.json")
+
+
+db = init_firestore()
+
+
+# =============================
+# 🤖 Ініціалізація бота
+# =============================
 
 bot = Bot(token=BOT_TOKEN)
-
-creds_json = os.getenv("FIREBASE_KEY")
-if not creds_json:
-    raise Exception("❌ FIREBASE_KEY is not set in environment variables!")
-creds = json.loads(creds_json)
-db = firestore.Client.from_service_account_info(creds)
+dp = Dispatcher()
 
 
-ADMIN_ID = 731475622
+# =============================
+# 🎛️ Глобальні кнопки
+# =============================
 
-
-# ✅ Inline-кнопки для будь-якого повідомлення
 def get_global_buttons():
+    """Універсальні inline-кнопки для всіх повідомлень."""
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -41,12 +78,16 @@ def get_global_buttons():
     )
 
 
+# =============================
+# 🧑‍🎄 Команда /start
+# =============================
+
 @dp.message(Command("start"))
 async def start_command(message: types.Message):
     user_id = str(message.from_user.id)
     username = message.from_user.username or "Unknown"
 
-    # Запис користувача у Firebase
+    # ✅ Запис користувача у Firestore
     user_ref = db.collection("users").document(user_id)
     user_ref.set({
         "userId": int(user_id),
@@ -61,10 +102,23 @@ async def start_command(message: types.Message):
 
     try:
         photo = FSInputFile("assets/Intro.png")
-        await message.answer_photo(photo=photo, caption=caption, parse_mode="Markdown", reply_markup=get_global_buttons())
+        await message.answer_photo(
+            photo=photo,
+            caption=caption,
+            parse_mode="Markdown",
+            reply_markup=get_global_buttons()
+        )
     except FileNotFoundError:
-        await message.answer(caption, parse_mode="Markdown", reply_markup=get_global_buttons())
+        await message.answer(
+            caption,
+            parse_mode="Markdown",
+            reply_markup=get_global_buttons()
+        )
 
+
+# =============================
+# ℹ️ Допомога (callback)
+# =============================
 
 @dp.callback_query(lambda c: c.data == "show_help")
 async def show_help_callback(callback: types.CallbackQuery):
@@ -82,6 +136,10 @@ async def show_help_callback(callback: types.CallbackQuery):
     await callback.answer()
 
 
+# =============================
+# 📣 /post — розсилка всім користувачам
+# =============================
+
 @dp.message(Command("post"))
 async def post_update(message: types.Message, command: CommandObject):
     if message.from_user.id != ADMIN_ID:
@@ -91,13 +149,11 @@ async def post_update(message: types.Message, command: CommandObject):
     text = command.args or "🎉 Нове оновлення у Christmas Mini-App!"
     photo_path = "assets/Update.png"
 
-    # Отримуємо всіх користувачів
     users_ref = db.collection("users").stream()
     user_ids = [int(u.id) for u in users_ref]
 
-    await message.answer(f"📣 Надсилаю оновлення {len(user_ids)} користувачам...")
+    await message.answer(f"📨 Надсилаю оновлення {len(user_ids)} користувачам...")
 
-    # Надсилаємо кожному
     sent = 0
     for user_id in user_ids:
         try:
@@ -118,20 +174,26 @@ async def post_update(message: types.Message, command: CommandObject):
                     reply_markup=get_global_buttons()
                 )
             sent += 1
-            await asyncio.sleep(0.05)  # невелика пауза, щоб не перевищити ліміт Telegram
+            await asyncio.sleep(0.05)  # трохи паузи, щоб уникнути flood
         except Exception as e:
             print(f"❌ Не вдалося надіслати користувачу {user_id}: {e}")
 
     await message.answer(f"✅ Успішно відправлено {sent}/{len(user_ids)} користувачам.")
 
 
-# ✅ Будь-яке інше повідомлення
+# =============================
+# 🧩 Будь-яке інше повідомлення
+# =============================
+
 @dp.message()
 async def fallback_message(message: types.Message):
     await message.answer("🎄 Обери дію нижче:", reply_markup=get_global_buttons())
 
 
-# ✅ Запуск
+# =============================
+# 🚀 Запуск
+# =============================
+
 async def main():
     print("✅ Bot is running... (Press Ctrl+C to stop)")
     await bot.delete_webhook(drop_pending_updates=True)
