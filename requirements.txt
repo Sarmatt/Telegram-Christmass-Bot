@@ -8,4 +8,5 @@ google-cloud-core==2.3.3
 google-auth==2.27.0
 
 # === System / Build Essentials ===
-setuptool
+setuptools
+wheel
