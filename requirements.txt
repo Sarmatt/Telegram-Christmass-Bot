@@ -7,6 +7,11 @@ google-cloud-firestore==2.13.1
 google-cloud-core==2.3.3
 google-auth==2.27.0
 
+# === Dependencies ===
+protobuf==4.25.3
+grpcio==1.62.3
+grpcio-status==1.62.3
+
 # === System / Build Essentials ===
 setuptools
 wheel
