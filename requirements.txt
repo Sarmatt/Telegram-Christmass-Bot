@@ -1,6 +1,6 @@
 # === Telegram Bot Core ===
 aiogram==3.1.1
-aiohttp==3.9.5
+aiohttp==3.8.6
 
 # === Firebase / Firestore ===
 google-cloud-firestore==2.13.1
